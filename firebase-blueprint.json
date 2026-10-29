@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing public identity and connected social media accounts.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "username": { "type": "string", "maxLength": 50, "pattern": "^[a-zA-Z0-9_]{3,30}$" },
+        "email": { "type": "string", "maxLength": 255 },
+        "photoURL": { "type": "string", "maxLength": 2048 },
+        "bio": { "type": "string", "maxLength": 300 },
+        "balance": { "type": "number" },
+        "accountNumber": { "type": "string", "maxLength": 30 },
+        "routingNumber": { "type": "string", "maxLength": 20 },
+        "accountType": { "type": "string", "maxLength": 30 },
+        "socialTwitter": { "type": "string", "maxLength": 60 },
+        "socialInstagram": { "type": "string", "maxLength": 60 },
+        "socialTikTok": { "type": "string", "maxLength": 60 },
+        "socialYouTube": { "type": "string", "maxLength": 60 },
+        "socialGitHub": { "type": "string", "maxLength": 60 },
+        "socialDiscord": { "type": "string", "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "username", "createdAt", "updatedAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Social payment transfer record with social feed metadata.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "maxLength": 128 },
+        "senderName": { "type": "string", "maxLength": 100 },
+        "senderUsername": { "type": "string", "maxLength": 50 },
+        "senderAvatar": { "type": "string", "maxLength": 2048 },
+        "senderAccountNumber": { "type": "string", "maxLength": 30 },
+        "receiverId": { "type": "string", "maxLength": 128 },
+        "receiverName": { "type": "string", "maxLength": 100 },
+        "receiverUsername": { "type": "string", "maxLength": 50 },
+        "receiverAvatar": { "type": "string", "maxLength": 2048 },
+        "receiverAccountNumber": { "type": "string", "maxLength": 30 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 5 },
+        "note": { "type": "string", "maxLength": 280 },
+        "emoji": { "type": "string", "maxLength": 10 },
+        "category": { "type": "string", "maxLength": 50 },
+        "visibility": { "type": "string", "enum": ["public", "friends", "private"] },
+        "status": { "type": "string", "enum": ["completed", "pending", "cancelled", "processing", "failed"] },
+        "likes": { "type": "array" },
+        "commentsCount": { "type": "number" },
+        "driveReceiptId": { "type": "string", "maxLength": 255 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "senderName", "receiverId", "receiverName", "amount", "note", "visibility", "status", "createdAt", "updatedAt"]
+    },
+    "PaymentRequest": {
+      "title": "PaymentRequest",
+      "description": "A split or payment request sent to another user.",
+      "type": "object",
+      "properties": {
+        "requesterId": { "type": "string", "maxLength": 128 },
+        "requesterName": { "type": "string", "maxLength": 100 },
+        "requesterUsername": { "type": "string", "maxLength": 50 },
+        "requesterAvatar": { "type": "string", "maxLength": 2048 },
+        "payerId": { "type": "string", "maxLength": 128 },
+        "payerName": { "type": "string", "maxLength": 100 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 5 },
+        "note": { "type": "string", "maxLength": 280 },
+        "status": { "type": "string", "enum": ["pending", "paid", "declined"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requesterId", "payerId", "amount", "note", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profiles with connected social handles and preferences."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Social feed payment records."
+    },
+    "/paymentRequests/{requestId}": {
+      "schema": "PaymentRequest",
+      "description": "Payment requests between users."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "PaySocial",
+  "description": "A social payment platform to send, split, and request money with friends, connect social accounts, export receipts to Google Drive, send payment notifications via Gmail, and import Google Contacts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

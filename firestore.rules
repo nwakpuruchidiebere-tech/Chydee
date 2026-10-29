@@ -1,0 +1,145 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(val) {
+      return val == request.time || (val is string && val.size() <= 60);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'username']) &&
+        data.uid is string && data.uid.size() <= 128 && data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+        data.username is string && data.username.size() >= 2 && data.username.size() <= 50 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 255)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2048)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 300)) &&
+        (!('balance' in data) || (data.balance is number && data.balance >= 0)) &&
+        (!('accountNumber' in data) || (data.accountNumber is string && data.accountNumber.size() <= 30)) &&
+        (!('routingNumber' in data) || (data.routingNumber is string && data.routingNumber.size() <= 20)) &&
+        (!('accountType' in data) || (data.accountType is string && data.accountType.size() <= 30)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 60)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 60)) &&
+        (!('socialTwitter' in data) || (data.socialTwitter is string && data.socialTwitter.size() <= 60)) &&
+        (!('socialInstagram' in data) || (data.socialInstagram is string && data.socialInstagram.size() <= 60)) &&
+        (!('socialTikTok' in data) || (data.socialTikTok is string && data.socialTikTok.size() <= 60)) &&
+        (!('socialYouTube' in data) || (data.socialYouTube is string && data.socialYouTube.size() <= 60)) &&
+        (!('socialGitHub' in data) || (data.socialGitHub is string && data.socialGitHub.size() <= 60)) &&
+        (!('socialDiscord' in data) || (data.socialDiscord is string && data.socialDiscord.size() <= 60));
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['senderId', 'senderName', 'receiverId', 'receiverName', 'amount', 'note', 'visibility', 'status']) &&
+        data.senderId is string && data.senderId.size() <= 128 && data.senderId == request.auth.uid &&
+        data.receiverId is string && data.receiverId.size() <= 128 && data.senderId != data.receiverId &&
+        data.senderName is string && data.senderName.size() <= 100 &&
+        data.receiverName is string && data.receiverName.size() <= 100 &&
+        data.amount is number && data.amount > 0 && data.amount <= 100000 &&
+        data.note is string && data.note.size() <= 280 &&
+        data.visibility in ['public', 'friends', 'private'] &&
+        data.status in ['completed', 'pending', 'cancelled', 'processing', 'failed'] &&
+        (!('currency' in data) || (data.currency is string && data.currency.size() <= 10)) &&
+        (!('emoji' in data) || (data.emoji is string && data.emoji.size() <= 20)) &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+        (!('likes' in data) || (data.likes is list && data.likes.size() <= 1000)) &&
+        (!('senderUsername' in data) || (data.senderUsername is string && data.senderUsername.size() <= 50)) &&
+        (!('receiverUsername' in data) || (data.receiverUsername is string && data.receiverUsername.size() <= 50)) &&
+        (!('senderAvatar' in data) || (data.senderAvatar is string && data.senderAvatar.size() <= 2048)) &&
+        (!('receiverAvatar' in data) || (data.receiverAvatar is string && data.receiverAvatar.size() <= 2048)) &&
+        (!('senderAccountNumber' in data) || (data.senderAccountNumber is string && data.senderAccountNumber.size() <= 30)) &&
+        (!('receiverAccountNumber' in data) || (data.receiverAccountNumber is string && data.receiverAccountNumber.size() <= 30)) &&
+        (!('driveReceiptId' in data) || (data.driveReceiptId is string && data.driveReceiptId.size() <= 255)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 60)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 60));
+    }
+
+    function isValidPaymentRequest(data) {
+      return data.keys().hasAll(['requesterId', 'payerId', 'amount', 'note', 'status']) &&
+        data.requesterId is string && data.requesterId.size() <= 128 && data.requesterId == request.auth.uid &&
+        data.payerId is string && data.payerId.size() <= 128 && data.requesterId != data.payerId &&
+        data.amount is number && data.amount > 0 && data.amount <= 100000 &&
+        data.note is string && data.note.size() <= 280 &&
+        data.status in ['pending', 'paid', 'declined'] &&
+        (!('currency' in data) || (data.currency is string && data.currency.size() <= 10));
+    }
+
+    // Health check / connection test collection
+    match /test/{docId} {
+      allow get: if true;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidUser(incoming()) && incoming().uid == existing().uid;
+      allow delete: if false;
+    }
+
+    // Transactions collection (Social Feed)
+    match /transactions/{transactionId} {
+      allow get: if resource.data.visibility == 'public' ||
+        (isSignedIn() && (
+          resource.data.visibility == 'friends' ||
+          resource.data.senderId == request.auth.uid ||
+          resource.data.receiverId == request.auth.uid
+        ));
+      allow list: if resource.data.visibility == 'public' ||
+        (isSignedIn() && (
+          resource.data.visibility in ['public', 'friends'] ||
+          resource.data.senderId == request.auth.uid ||
+          resource.data.receiverId == request.auth.uid
+        ));
+      allow create: if isSignedIn() && isValidId(transactionId) && isValidTransaction(incoming());
+      allow update: if isSignedIn() && isValidId(transactionId) && (
+        // Action: Reaction (like/unlike)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && incoming().likes is list && incoming().likes.size() <= 1000) ||
+        // Action: Attach Drive Receipt
+        ((existing().senderId == request.auth.uid || existing().receiverId == request.auth.uid) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['driveReceiptId', 'updatedAt']) &&
+          incoming().driveReceiptId is string && incoming().driveReceiptId.size() <= 255)
+      );
+      allow delete: if false;
+    }
+
+    // Payment Requests collection
+    match /paymentRequests/{requestId} {
+      allow get: if isSignedIn() && (
+        resource.data.requesterId == request.auth.uid ||
+        resource.data.payerId == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        resource.data.requesterId == request.auth.uid ||
+        resource.data.payerId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isValidId(requestId) && isValidPaymentRequest(incoming());
+      allow update: if isSignedIn() && isValidId(requestId) &&
+        (existing().payerId == request.auth.uid || existing().requesterId == request.auth.uid) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+        incoming().status in ['pending', 'paid', 'declined'];
+      allow delete: if false;
+    }
+  }
+}
